@@ -1,1 +1,4 @@
 scheduler-keys.json
+cert.pem
+key.pem
+schedule.db
