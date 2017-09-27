@@ -8,12 +8,14 @@ import json
 import config
 from msg_handlers import main_handler, notification_handler
 import traceback
+from webviews.webviews import webview
 
 client = Messager(config.facebook_access_token)
 
 
 app = Flask(__name__)
 
+app.register_blueprint(webview, url_prefix='/webviews')
 
 @app.route('/')
 def hello_world():

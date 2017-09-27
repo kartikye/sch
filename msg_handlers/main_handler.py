@@ -1,5 +1,5 @@
 from run import client
-from pymessager.message import QuickReply
+from pymessager.message import QuickReply, ActionButton, WebviewType, ButtonType
 from db import db_config, db_users
 import requests, json, config
 import pendulum
@@ -41,7 +41,6 @@ def handle(message):
         'email': add_email,
         'add.term': add_term,
         'add.subject': add_subject,
-        'add.class': add_class
     }
     
     switch[status.split('#')[0]](message, msg_id, text, status)
@@ -74,8 +73,8 @@ def do_add(message, msg_id, text):
         if len(qr) == 0:
             client.send_text(msg_id, 'No subjects found. Please add a subject to add a class.')
             return
-        update_state(msg_id, 'add.class#1')
-        client.send_quick_replies(msg_id, 'What is the subject?', qr)
+        client.send_buttons(msg_id, 'Please create the class by clicking the link', [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
+        update_state(msg_id, '')
     elif item == 'homework':
         pass
     elif item == 'activity':
@@ -84,6 +83,7 @@ def do_add(message, msg_id, text):
         pass
     else:
         pass
+    
 def add_email(message, msg_id, text, status):
     message = message['message']
     db.execute('update Users set email = ? where msg_id = ?', (message['text'], msg_id))
@@ -108,8 +108,6 @@ def add_term(message, msg_id, text, status):
         try:
             states[msg_id]['term'].append(pendulum.parse(text))
         except Exception as e:
-            print('---------------------------------------------------')
-            print(e)
             client.send_text(msg_id, 'That is an invalid date, please try again')
             return
         update_state(msg_id, 'add.term#3')
@@ -118,7 +116,6 @@ def add_term(message, msg_id, text, status):
         try:
             states[msg_id]['term'].append(pendulum.parse(text))
         except Exception as e:
-            print(e)
             client.send_text(msg_id, 'That is an invalid date, please try again')
             return
         update_state(msg_id, '')
@@ -128,7 +125,7 @@ def add_term(message, msg_id, text, status):
         if lastrowid:
             client.send_text(msg_id, 'Term added')
             update_state(msg_id, 'add.term#4')
-            ask_affirmation(msg_id, 'Do you want to add a subject?')
+            ask_affirmation(msg_id,'Do you want to add a subject?')
         else:
             client.send_text(msg_id, 'Term could not be added')
             states[msg_id]['term'] = []
@@ -181,7 +178,10 @@ def add_subject(message, msg_id, text, status):
             
             
 def add_class(message, msg_id, text, status):
-    step = int(status.split('#')[1])
+
+    client.send_buttons(msg_id, 'Please create the class by clicking the link', [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
+    update_state(msg_id, '')
+    '''step = int(status.split('#')[1])
     if step == 1:
         if msg_id not in states:
             states[msg_id] = {}
@@ -211,7 +211,7 @@ def add_class(message, msg_id, text, status):
         update_state(msg_id, 'add.class#6')
         client.send_text(msg_id, 'What is the class location?')
     if step == 6:
-        db.execute('insert into Classes (userid, term_id, subject_id, start_time, end_time, repeat, location')
+        db.execute('insert into Classes (userid, term_id, subject_id, start_time, end_time, repeat, location')'''
         
 def add_email(message, msg_id, text, status):
     message = message['message']

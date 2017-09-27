@@ -1,0 +1,194 @@
+<html>
+    <head>
+        <title>Add a new class</title>
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+        <style type="text/css">
+            *{
+                font-family: 'SFUIText-Regular', 'Segoe UI', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif';
+            }
+            
+            input, button{
+                border: 1px solid #E5E5E5;
+                margin-bottom: 10px;
+            }
+            
+            input[type="text"]{
+                width: 80%;
+                height: 20px;
+            }
+            
+            .checkbox_letter{
+                width: 19.3px;
+                text-align: center;
+                display: inline-block;
+            }
+            
+            input[type="checkbox"] {
+                border: 1px solid #E5E5E5;
+                border-radius: 5px;
+            }
+            
+            button {
+                border-radius: 4px;
+                background-color: #0084FF;
+                color: white;
+                padding: 6px 14px 8px 14px;
+                margin-top: 15px;
+                font-weight: 600;
+                text-transform: uppercase;
+                box-shadow: 0 3px 0 #e8e8e8;
+                width: 60%;
+                margin-left: 30px;
+            }
+            
+            button:hover {
+                box-shadow: 0 0px 0 #e8e8e8;
+            }
+            
+            body{
+                display: flex;
+                justify-content: center;
+            }
+            
+            #form {
+                width: 300px;
+                padding-left: 30px;
+                margin-top: 30px;
+            }
+            
+        </style>
+    </head>
+    
+    <body>
+        <script>
+            (function(d, s, id){
+                var js, fjs = d.getElementsByTagName(s)[0];
+                if (d.getElementById(id)) {return;}
+                js = d.createElement(s); js.id = id;
+                js.src = "//connect.facebook.com/en_US/messenger.Extensions.js";
+                fjs.parentNode.insertBefore(js, fjs);
+            }(document, 'script', 'Messenger'));
+        </script>
+        
+        <script type="text/javascript">
+            var submit = function() {
+                alert('hi')
+                var subject = document.getElementsByName('subject')[0].value
+                var module = document.getElementsByName('module')[0].value
+                var start_time = document.getElementsByName('start_time')[0].value
+                var end_time = document.getElementsByName('end_time')[0].value
+                var m = document.getElementById('m').checked
+                var t = document.getElementById('t').checked
+                var w = document.getElementById('w').checked
+                var th = document.getElementById('th').checked
+                var f = document.getElementById('f').checked
+                var s = document.getElementById('s').checked
+                var su = document.getElementById('su').checked
+                
+                alert(m)
+                
+                if (subject == '' || module == '' || start_time == '' || end_time =='' /*|| !(m || t || w || th || f || s || su)*/) {
+                    alert('Please fill in the fields')
+                    return
+                }
+                
+                var repeat = ''
+                if (m){
+                    repeat += 'm '
+                }
+                
+                if (t){
+                    repeat += 't '
+                }
+                
+                if (w){
+                    repeat += 'w '
+                }
+                
+                if (th){
+                    repeat += 'th '
+                }
+                
+                if (f){
+                    repeat += 'f '
+                }
+                
+                if (s){
+                    repeat += 's '
+                }
+                
+                if (su){
+                    repeat += 'su '
+                }
+                
+                MessengerExtensions.getUserID(function success(uids) {
+              	// User ID was successfully obtained. 
+                  	var psid = uids.psid;
+                  	
+                  	var form = document.getElementById('form')
+                  	
+                  	nanoajax.ajax({url: 'https://winami.io/webviews/add_class', method: 'POST', body: 'id='+psid+'&subject='+subject+'&module='+module+'&start_time='+start_time+'&end_time='+end_time+'&repeat='+repeat}, function (code, responseText, request) {
+                  	    
+                    })
+              
+                }, function error(err, errorMessage) {      
+              	    alert(errorMessage)
+                });    
+            }
+        </script>
+        
+        <div id='form'>
+            <label>Subject</label>
+            <br>
+            <input type="text" name="subject"/>
+            <br>
+            <label>Class Module</label>
+            <br>
+            <input type="text" name="module"/>
+            <br>
+            <label for="">Start Time</label>
+            <br>
+            <input type="text" name="start_time" placeholder="14:10"/>
+            <br>
+            <label for="">End Time</label>
+            <br>
+            <input type="text" name="end_time" placeholder="16:00"/>
+            <br>
+            <label for="">Repeat on</label>
+            <br>
+            <div class="checkbox_letter">
+                m<input type="checkbox" id="m"/>
+            </div> 
+            <div class="checkbox_letter">
+                t<input type="checkbox" id="t"/>
+            </div>
+            <div class="checkbox_letter">
+                w<input type="checkbox" id="w"/>
+            </div>
+            <div class="checkbox_letter">
+                th<input type="checkbox" id="th"/>
+            </div>
+            <div class="checkbox_letter">
+                f<input type="checkbox" id="f"/>
+            </div> 
+            <div class="checkbox_letter">
+                s<input type="checkbox" id="s"/>
+            </div> 
+            <div class="checkbox_letter">
+                su<input type="checkbox" id="su"/>
+            </div>
+            <br>
+            <br>
+            <button onclick="submit()">Submit</button>
+        </div>
+        
+        
+        
+        <script type="text/javascript">
+            !function(t,e){function n(t){return t&&e.XDomainRequest&&!/MSIE 1/.test(navigator.userAgent)?new XDomainRequest:e.XMLHttpRequest?new XMLHttpRequest:void 0}function o(t,e,n){t[e]=t[e]||n}var r=["responseType","withCredentials","timeout","onprogress"];t.ajax=function(t,a){function s(t,e){return function(){c||(a(void 0===f.status?t:f.status,0===f.status?"Error":f.response||f.responseText||e,f),c=!0)}}var u=t.headers||{},i=t.body,d=t.method||(i?"POST":"GET"),c=!1,f=n(t.cors);f.open(d,t.url,!0);var l=f.onload=s(200);f.onreadystatechange=function(){4===f.readyState&&l()},f.onerror=s(null,"Error"),f.ontimeout=s(null,"Timeout"),f.onabort=s(null,"Abort"),i&&(o(u,"X-Requested-With","XMLHttpRequest"),e.FormData&&i instanceof e.FormData||o(u,"Content-Type","application/x-www-form-urlencoded"));for(var p,m=0,v=r.length;v>m;m++)p=r[m],void 0!==t[p]&&(f[p]=t[p]);for(var p in u)f.setRequestHeader(p,u[p]);return f.send(i),f},e.nanoajax=t}({},function(){return this}());
+        </script>
+        
+        
+        
+    </body>
+</html>
