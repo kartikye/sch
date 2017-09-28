@@ -7,12 +7,12 @@
                 font-family: 'SFUIText-Regular', 'Segoe UI', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif';
             }
             
-            input, button{
+            select, input, button{
                 border: 1px solid #E5E5E5;
                 margin-bottom: 10px;
             }
             
-            input[type="text"]{
+            select, input[type="text"]{
                 width: 80%;
                 height: 20px;
             }
@@ -71,8 +71,28 @@
         </script>
         
         <script type="text/javascript">
+            var id = null
+            
+            window.extAsyncInit = function() {
+                MessengerExtensions.getUserID(function success(uids) {
+              	// User ID was successfully obtained. 
+                  	id = uids.psid;
+                  	
+                    nanoajax.ajax({url:'https://winami.io/webviews/subjects/'+id}, function (code, responseText) {
+                        var subjects = JSON.parse(responseText)
+                        var subjectSelect = document.getElementById('subject');
+                        for (var i = 0; i < subjects.length; i++) {
+                            subjectSelect.options[subjectSelect.options.length] = new Option(subjects[i], subjects[i]);
+                        }
+                    })
+                  	
+                  	
+                }, function error(err, errorMessage) {      
+              	    alert(errorMessage)
+                });    
+            };
+        
             var submit = function() {
-                alert('hi')
                 var subject = document.getElementsByName('subject')[0].value
                 var module = document.getElementsByName('module')[0].value
                 var start_time = document.getElementsByName('start_time')[0].value
@@ -84,8 +104,6 @@
                 var f = document.getElementById('f').checked
                 var s = document.getElementById('s').checked
                 var su = document.getElementById('su').checked
-                
-                alert(m)
                 
                 if (subject == '' || module == '' || start_time == '' || end_time =='' /*|| !(m || t || w || th || f || s || su)*/) {
                     alert('Please fill in the fields')
@@ -121,26 +139,21 @@
                     repeat += 'su '
                 }
                 
-                MessengerExtensions.getUserID(function success(uids) {
-              	// User ID was successfully obtained. 
-                  	var psid = uids.psid;
-                  	
-                  	var form = document.getElementById('form')
-                  	
-                  	nanoajax.ajax({url: 'https://winami.io/webviews/add_class', method: 'POST', body: 'id='+psid+'&subject='+subject+'&module='+module+'&start_time='+start_time+'&end_time='+end_time+'&repeat='+repeat}, function (code, responseText, request) {
-                  	    
-                    })
+                
+                                
+                nanoajax.ajax({url: 'https://winami.io/webviews/add_class', method: 'POST', body: 'id='+psid+'&subject='+subject+'&module='+module+'&start_time='+start_time+'&end_time='+end_time+'&repeat='+repeat}, function (code, responseText, request) {
+                    alert('hi')
+                })
               
-                }, function error(err, errorMessage) {      
-              	    alert(errorMessage)
-                });    
+                
             }
         </script>
         
         <div id='form'>
             <label>Subject</label>
             <br>
-            <input type="text" name="subject"/>
+            <select type="text" name="subject" id ="subject">
+            </select>
             <br>
             <label>Class Module</label>
             <br>
