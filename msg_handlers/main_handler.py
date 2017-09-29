@@ -1,6 +1,6 @@
 from run import client
 from pymessager.message import QuickReply, ActionButton, WebviewType, ButtonType
-from db import db_config, db_users
+from db import *
 import requests, json, config
 import pendulum
 db = db_config.create_db_connection()
@@ -41,6 +41,7 @@ def handle(message):
         'email': add_email,
         'add.term': add_term,
         'add.subject': add_subject,
+        'add.class': add_class
     }
     
     switch[status.split('#')[0]](message, msg_id, text, status)
@@ -69,12 +70,7 @@ def do_add(message, msg_id, text):
         update_state(msg_id, 'add.subject#1')
         client.send_text(msg_id, "What is the subject?")
     elif item == 'class':
-        qr =  [QuickReply(y[0],y[0]) for y in db.execute('select Subjects.subject from Subjects join Users on Users.user_id = Subjects.userid where Users.msg_id = ?', (msg_id,)).fetchall()]
-        if len(qr) == 0:
-            client.send_text(msg_id, 'No subjects found. Please add a subject to add a class.')
-            return
-        client.send_buttons(msg_id, 'Please create the class by clicking the link', [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
-        update_state(msg_id, '')
+        ask_to_add_class()
     elif item == 'homework':
         pass
     elif item == 'activity':
@@ -172,17 +168,28 @@ def add_subject(message, msg_id, text, status):
             if 'class' not in states[msg_id]:
                 states[msg_id]['class'] = {}
             states[msg_id]['class']['subject'] = states[msg_id]['subject']['name']
-            update_state(msg_id, 'add.class#2')
-            client.send_text(msg_id, "What module?")
+            ask_to_add_class()
         states[msg_id]['subject'] = {}
             
             
 def add_class(message, msg_id, text, status):
-
-    client.send_buttons(msg_id, 'Please create the class by clicking the link', [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
-    update_state(msg_id, '')
-    '''step = int(status.split('#')[1])
+    step = int(status.split('#')[1])
     if step == 1:
+        if 'affirmation' in message['message']['nlp']['entities']:
+            user_id = db_users.get_user(msg_id=msg_id)['id']
+            subject = db_subjects.get_subject(subject=states[msg_id]['class']['subject'])
+            print(states)
+            db.execute('insert into Classes'\
+            '(userid, term_id, subject_id, module, start_time, end_time, repeat, location) '\
+            'values (?,?,?,?,?,?,?,?)',\
+            (user_id, subject['term_id'], subject['id'], states[msg_id]['class']['module'], states[msg_id]['class']['start_time'], states[msg_id]['class']['end_time'], states[msg_id]['class']['repeat'], states[msg_id]['class']['location']))
+            db.commit()
+            update_state(msg_id, '')
+            client.send_text(msg_id, 'Class added!')
+        else:
+            update_state(msg_id, '')
+            client.send_text(msg_id, 'Option to update coming soon!')
+    '''
         if msg_id not in states:
             states[msg_id] = {}
         if 'class' not in states[msg_id]:
@@ -212,6 +219,14 @@ def add_class(message, msg_id, text, status):
         client.send_text(msg_id, 'What is the class location?')
     if step == 6:
         db.execute('insert into Classes (userid, term_id, subject_id, start_time, end_time, repeat, location')'''
+
+def ask_to_add_class():
+    qr =  [QuickReply(y[0],y[0]) for y in db.execute('select Subjects.subject from Subjects join Users on Users.user_id = Subjects.userid where Users.msg_id = ?', (msg_id,)).fetchall()]
+    if len(qr) == 0:
+        client.send_text(msg_id, 'No subjects found. Please add a subject to add a class.')
+        return
+    client.send_buttons(msg_id, 'Please create the class by clicking the link', [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
+    update_state(msg_id, 'add.class#1')
         
 def add_email(message, msg_id, text, status):
     message = message['message']

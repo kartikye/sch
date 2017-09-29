@@ -12,7 +12,7 @@
                 margin-bottom: 10px;
             }
             
-            select, input[type="text"]{
+            select, input[type="text"], input[type="time"]{
                 width: 80%;
                 height: 20px;
             }
@@ -104,8 +104,9 @@
                 var f = document.getElementById('f').checked
                 var s = document.getElementById('s').checked
                 var su = document.getElementById('su').checked
+                var location = document.getElementsByName('location')[0].value
                 
-                if (subject == '' || module == '' || start_time == '' || end_time =='' /*|| !(m || t || w || th || f || s || su)*/) {
+                if (subject == '' || module == '' || start_time == '' || end_time =='' || !(m || t || w || th || f || s || su)) {
                     alert('Please fill in the fields')
                     return
                 }
@@ -139,10 +140,12 @@
                     repeat += 'su '
                 }
                 
-                
-                                
-                nanoajax.ajax({url: 'https://winami.io/webviews/add_class', method: 'POST', body: 'id='+psid+'&subject='+subject+'&module='+module+'&start_time='+start_time+'&end_time='+end_time+'&repeat='+repeat}, function (code, responseText, request) {
-                    alert('hi')
+                nanoajax.ajax({url: 'https://winami.io/webviews/add_class', method: 'POST', body: 'id='+id+'&subject='+subject+'&module='+module+'&start_time='+start_time+'&end_time='+end_time+'&repeat='+repeat+'&location='+location}, function (code, responseText, request) {
+                    MessengerExtensions.requestCloseBrowser(function success() {
+  
+                    }, function error(err) {
+                        window.location('https://www.messenger.com/closeWindow/?image_url=https://i.imgur.com/xAPX3v1.png&display_text=Closing%20Window')
+                    });
                 })
               
                 
@@ -161,11 +164,11 @@
             <br>
             <label for="">Start Time</label>
             <br>
-            <input type="text" name="start_time" placeholder="14:10"/>
+            <input type="time" name="start_time" placeholder="14:10"/>
             <br>
             <label for="">End Time</label>
             <br>
-            <input type="text" name="end_time" placeholder="16:00"/>
+            <input type="time" name="end_time" placeholder="16:00"/>
             <br>
             <label for="">Repeat on</label>
             <br>
@@ -190,6 +193,10 @@
             <div class="checkbox_letter">
                 su<input type="checkbox" id="su"/>
             </div>
+            <br>
+            <label for="">Location</label>
+            <br>
+            <input type="text" name="location" placeholder="Soda 310"/>
             <br>
             <br>
             <button onclick="submit()">Submit</button>

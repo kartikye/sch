@@ -14,7 +14,7 @@ def insert_user(first_name, last_name, msg_id, password):
 	
 
 def get_user(id=None, msg_id=None):
-	user = db.execute('select * from Users where id = ? or msg_id = ?', [id, msg_id]).fetchone()
+	user = db.execute('select * from Users where user_id = ? or msg_id = ?', [id, msg_id]).fetchone()
 	return {
 		'id': user[0],
 		'first_name': user[1],
