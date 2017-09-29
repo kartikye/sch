@@ -1,16 +1,17 @@
+import config
 from db import db_config
 from db import db_users
 #from calendar import cal
 from flask import Flask, render_template, request
 from pymessager.message import Messager
+client = Messager(config.facebook_access_token)
 import os
 import json
-import config
+
 from msg_handlers import main_handler, notification_handler
 import traceback
 from webviews.webviews import webview
 
-client = Messager(config.facebook_access_token)
 
 
 app = Flask(__name__)
@@ -51,6 +52,7 @@ def fb_receive_message():
 @app.route('/send_notifications')
 def send_notifications():
     notification_handler.handle()
+    return 'hi', 200
     
 
 if __name__ == '__main__':

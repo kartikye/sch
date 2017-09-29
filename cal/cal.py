@@ -28,7 +28,7 @@ def create_calendar(user_id):
             'type': 'user',
             'value': db.execute('select email from Users where user_id = '+ str(user_id)).fetchone()[0],
         },
-        'role': 'owner'
+        'role': 'writer'
     }
 
     created_rule = service.acl().insert(calendarId=calendar_id, body=rule).execute()
@@ -44,6 +44,22 @@ def delete_calendar(user_id):
     service.calendars().delete(cal_id).execute()
 
 def get_near_events(calendar_id):
-    events = service.events().list(calendarId=calendar_id).execute()
-    print(events)
-    return [event['summary'] for event in events['items']]
+    events = service.events().list(calendarId=calendar_id, timeMax=pendulum.utcnow().add(minutes=15).to_rfc3339_string(), singleEvents=True, maxResults=2).execute()
+    return events['items']
+    
+def test():
+    id = 'nteed2v0b3cehcnfemu4kqubt4@group.calendar.google.com'
+    now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
+    print('Getting the upcoming 10 events')
+    eventsResult = service.events().list(
+        calendarId=id, timeMin=now, maxResults=10, singleEvents=True,
+        orderBy='startTime').execute()
+    events = eventsResult.get('items', [])
+
+    if not events:
+        print('No upcoming events found.')
+    for event in events:
+        start = event['start'].get('dateTime', event['start'].get('date'))
+        print(start, event['summary'])
+
+def add_class(class_id)

@@ -4,6 +4,8 @@ from db import *
 import requests, json, config
 import pendulum
 db = db_config.create_db_connection()
+from cal import cal
+import re
 
 states = {}
 
@@ -82,13 +84,28 @@ def do_add(message, msg_id, text):
     
 def add_email(message, msg_id, text, status):
     message = message['message']
-    db.execute('update Users set email = ? where msg_id = ?', (message['text'], msg_id))
-    db.commit()
-    cal.create_calendar(db.execute('select user_id from Users where msg_id = ?', (msg_id,)).fetchone()[0])
-    client.send_text(msg_id, 'Your calendar has been created. Please check your email for the invite.')
-    update_state(msg_id, 'add.term#1')
-    client.send_text(msg_id, "To get started, lets add a term. What is the term name?")
-        
+    step = int(status.split('#')[1])
+    if step == 0:
+        if re.match("^.+@([?)[a-zA-Z0-9-.]+.([a-zA-Z]{2,3}|[0-9]{1,3})(]?)$", text) != None:
+            update_state(msg_id, 'email#1')
+            ask_affirmation(msg_id, 'Is '+text+' correct?')
+        else:
+            client.send_text(msg_id, ':(')
+            client.send_text(msg_id, text + ' does not seem like a valid email. Please try again.')
+    if step == 1:
+        if 'affirmation' in message['message']['nlp']['entities']:
+            db.execute('update Users set email = ? where msg_id = ?', (message['text'], msg_id))
+            db.commit()
+            cal.create_calendar(db.execute('select user_id from Users where msg_id = ?', (msg_id,)).fetchone()[0])
+            client.send_text(msg_id, 'Your calendar has been created. Please check your email for the invite.')
+            update_state(msg_id, 'add.term#1')
+            client.send_text(msg_id, "To get started, lets add a term. What is the term name?")
+        else:
+            update_state(msg_id, 'email#0')
+            client.send_text(msg_id, ':(')
+            client.send_text(msg_id, 'Please enter your email again!')
+            
+            
 #Add a term
 def add_term(message, msg_id, text, status):
     step = int(status.split('#')[1])
@@ -179,11 +196,12 @@ def add_class(message, msg_id, text, status):
             user_id = db_users.get_user(msg_id=msg_id)['id']
             subject = db_subjects.get_subject(subject=states[msg_id]['class']['subject'])
             print(states)
-            db.execute('insert into Classes'\
+            cursor = db.execute('insert into Classes'\
             '(userid, term_id, subject_id, module, start_time, end_time, repeat, location) '\
             'values (?,?,?,?,?,?,?,?)',\
             (user_id, subject['term_id'], subject['id'], states[msg_id]['class']['module'], states[msg_id]['class']['start_time'], states[msg_id]['class']['end_time'], states[msg_id]['class']['repeat'], states[msg_id]['class']['location']))
             db.commit()
+            cal.add_class(cursor.lastrowid)
             update_state(msg_id, '')
             client.send_text(msg_id, 'Class added!')
         else:
