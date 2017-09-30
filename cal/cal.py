@@ -2,7 +2,7 @@ from httplib2 import Http
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.discovery import build
 import json, datetime
-from db import db_config
+from db import db_config, db_classes
 import pendulum
 
 scopes = ['https://www.googleapis.com/auth/calendar']
@@ -62,4 +62,34 @@ def test():
         start = event['start'].get('dateTime', event['start'].get('date'))
         print(start, event['summary'])
 
-def add_class(class_id)
+def add_class(class_id):
+    cls = db_classes.get_class(class_id)
+    event = {
+        'summary': cls['subject']['subject']+': '+cls['module'],
+        'location': cls['location'],
+        'start': {
+            'dateTime': '',
+            'timeZone': 'America/Los_Angeles',
+        },
+        'end': {
+            'dateTime': '2015-05-28T17:00:00-07:00',
+            'timeZone': 'America/Los_Angeles',
+        },
+        'recurrence': [
+            'RRULE:FREQ=DAILY;COUNT=2'
+        ],
+        'attendees': [
+            {'email': 'lpage@example.com'},
+            {'email': 'sbrin@example.com'},
+        ],
+        'reminders': {
+            'useDefault': False,
+            'overrides': [
+                {'method': 'email', 'minutes': 24 * 60},
+                {'method': 'popup', 'minutes': 10},
+            ],
+        },
+    }
+
+    event = service.events().insert(calendarId='primary', body=event).execute()
+    print 'Event created: %s' % (event.get('htmlLink'))
