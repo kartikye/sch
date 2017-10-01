@@ -19,10 +19,12 @@ def handle(message):
     text = message['message']['text']
     
     if  db.execute('select * from Users where msg_id = ?', (msg_id,)).fetchone() is None:
-        data = json.loads(requests.get('https://graph.facebook.com/v2.6/'+msg_id+'?fields=first_name,last_name&access_token='+config.facebook_access_token).text)
+        #data = json.loads(requests.get('https://graph.facebook.com/v2.6/'+msg_id+'?fields=first_name,last_name&access_token='+config.facebook_access_token).text)
+        data = client.get_user_data(msg_id)
         db_users.insert_user(data['first_name'], data['last_name'], msg_id, '')
-        update_state(msg_id, 'email#0')
+        update_state(msg_id, 'setup#0')
         client.send_text(msg_id, "Hi " + data['first_name'] + ', thank you for using Schej! Schej will help you schedule you life and classes! Please enter your email so that we can send you a calendar.')
+        return
     
     status = db.execute('select status from Conversation where msg_id = ?', (msg_id,)).fetchone()[0]
     
@@ -40,7 +42,7 @@ def handle(message):
 
     switch = {
         '' : no_status,
-        'email': add_email,
+        'setup': setup,
         'add.term': add_term,
         'add.subject': add_subject,
         'add.class': add_class
@@ -72,7 +74,7 @@ def do_add(message, msg_id, text):
         update_state(msg_id, 'add.subject#1')
         client.send_text(msg_id, "What is the subject?")
     elif item == 'class':
-        ask_to_add_class()
+        ask_to_add_class(msg_id)
     elif item == 'homework':
         pass
     elif item == 'activity':
@@ -82,28 +84,46 @@ def do_add(message, msg_id, text):
     else:
         pass
     
-def add_email(message, msg_id, text, status):
+def setup(message, msg_id, text, status):
     message = message['message']
     step = int(status.split('#')[1])
+    print()
     if step == 0:
-        if re.match("^.+@([?)[a-zA-Z0-9-.]+.([a-zA-Z]{2,3}|[0-9]{1,3})(]?)$", text) != None:
-            update_state(msg_id, 'email#1')
+        if re.match("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", text) != None:
+            update_state(msg_id, 'setup#1')
+            if msg_id not in states:
+                states[msg_id] = {}
+            if 'setup' not in states[msg_id]:
+                states[msg_id]['setup'] = {}
+            states[msg_id]['setup']['email'] = text
             ask_affirmation(msg_id, 'Is '+text+' correct?')
         else:
             client.send_text(msg_id, ':(')
             client.send_text(msg_id, text + ' does not seem like a valid email. Please try again.')
     if step == 1:
-        if 'affirmation' in message['message']['nlp']['entities']:
-            db.execute('update Users set email = ? where msg_id = ?', (message['text'], msg_id))
+        if 'affirmation' in message['nlp']['entities']:
+            db.execute('update Users set email = ? where msg_id = ?', (states[msg_id]['setup']['email'], msg_id))
             db.commit()
-            cal.create_calendar(db.execute('select user_id from Users where msg_id = ?', (msg_id,)).fetchone()[0])
-            client.send_text(msg_id, 'Your calendar has been created. Please check your email for the invite.')
-            update_state(msg_id, 'add.term#1')
-            client.send_text(msg_id, "To get started, lets add a term. What is the term name?")
+            update_state(msg_id, 'setup#2')
+            client.send_text(msg_id, 'Which city so you live in? (We need to find your timezone for your calendar)')
         else:
-            update_state(msg_id, 'email#0')
+            update_state(msg_id, 'setup#0')
             client.send_text(msg_id, ':(')
             client.send_text(msg_id, 'Please enter your email again!')
+    if step == 2:
+        try:
+            coordinates = json.loads(requests.get('http://maps.googleapis.com/maps/api/geocode/json?address='+text+',+CA&sensor=false').text)['results'][0]['geometry']['location']
+            timezone = json.loads(requests.get('https://maps.googleapis.com/maps/api/timezone/json?location='+str(coordinates['lat'])+','+str(coordinates['lng'])+'&timestamp='+str(pendulum.now().int_timestamp)+'&sensor=false').text)['timeZoneId']
+        except Exception as e:
+            print(e)
+            client.send_text(msg_id,"Sorry, we couldn't find that timezone. Please try again.")
+            return
+        db.execute('update Users set timezone = ? where msg_id = ?', (timezone, msg_id))
+        db.commit()
+        cal.create_calendar(db.execute('select user_id from Users where msg_id = ?', (msg_id,)).fetchone()[0])
+        client.send_text(msg_id, 'Your calendar has been created. Please check your email for the invite.')
+        update_state(msg_id, 'add.term#1')
+        client.send_text(msg_id, "To get started, lets add a term. What is the term name?")
             
             
 #Add a term
@@ -151,7 +171,9 @@ def add_term(message, msg_id, text, status):
                 states[msg_id]['subject'] = {'term': states[msg_id]['term'][0]}
             update_state(msg_id, 'add.subject#1')
             client.send_text(msg_id, 'What is the subject?')
-        states[msg_id]['term'] = []
+        else:
+            states[msg_id]['term'] = []
+            update_state(msg_id, '')
     
 def add_subject(message, msg_id, text, status):
     def insert_subject(term):
@@ -185,7 +207,7 @@ def add_subject(message, msg_id, text, status):
             if 'class' not in states[msg_id]:
                 states[msg_id]['class'] = {}
             states[msg_id]['class']['subject'] = states[msg_id]['subject']['name']
-            ask_to_add_class()
+            ask_to_add_class(msg_id)
         states[msg_id]['subject'] = {}
             
             
@@ -201,44 +223,17 @@ def add_class(message, msg_id, text, status):
             'values (?,?,?,?,?,?,?,?)',\
             (user_id, subject['term_id'], subject['id'], states[msg_id]['class']['module'], states[msg_id]['class']['start_time'], states[msg_id]['class']['end_time'], states[msg_id]['class']['repeat'], states[msg_id]['class']['location']))
             db.commit()
-            cal.add_class(cursor.lastrowid)
+            if cal.add_class(cursor.lastrowid)
+                client.send_text(msg_id, 'Class added!')
+            else:
+                client.send_text(msg_id, 'Oops! Something went wrong')
             update_state(msg_id, '')
-            client.send_text(msg_id, 'Class added!')
+            
         else:
             update_state(msg_id, '')
             client.send_text(msg_id, 'Option to update coming soon!')
-    '''
-        if msg_id not in states:
-            states[msg_id] = {}
-        if 'class' not in states[msg_id]:
-            states[msg_id]['class'] = {}
-        states[msg_id]['class']['subject'] = text
-        update_state(msg_id, 'add.class#2')
-        client.send_text(msg_id, 'What module?')
-    if step == 2:
-        states[msg_id]['class']['module'] = text
-        update_state(msg_id, 'add.class#3')
-        client.send_text(msg_id, 'What time does the class start? (HH:MM)')
-    if step == 3:
-        states[msg_id]['class']['start'] = text
-        update_state(msg_id, 'add.class#4')
-        client.send_text(msg_id, 'What time does the class end? (HH:MM)')
-    if step == 4:
-        states[msg_id]['class']['end'] = text
-        update_state(msg_id, 'add.class#5')
-        client.send_text(msg_id, 'What days does the class repeat? (m t w th f s su) Please seperate days with a space.')
-    if step == 5:
-        for d in text.split(' '):
-            if d not in ['m', 't', 'w', 'th', 'f', 's', 'ss']:
-                client.send_text(msg_id, 'Sorry, that is not a valid input. Please try again')
-                return
-        states[msg_id]['class']['days'] = text
-        update_state(msg_id, 'add.class#6')
-        client.send_text(msg_id, 'What is the class location?')
-    if step == 6:
-        db.execute('insert into Classes (userid, term_id, subject_id, start_time, end_time, repeat, location')'''
 
-def ask_to_add_class():
+def ask_to_add_class(msg_id):
     qr =  [QuickReply(y[0],y[0]) for y in db.execute('select Subjects.subject from Subjects join Users on Users.user_id = Subjects.userid where Users.msg_id = ?', (msg_id,)).fetchall()]
     if len(qr) == 0:
         client.send_text(msg_id, 'No subjects found. Please add a subject to add a class.')
@@ -246,15 +241,6 @@ def ask_to_add_class():
     client.send_buttons(msg_id, 'Please create the class by clicking the link', [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
     update_state(msg_id, 'add.class#1')
         
-def add_email(message, msg_id, text, status):
-    message = message['message']
-    db.execute('update Users set email = ? where msg_id = ?', (message['text'], msg_id))
-    db.commit()
-    cal.create_calendar(db.execute('select user_id from Users where msg_id = ?', (msg_id,)).fetchone()[0])
-    client.send_text(msg_id, 'Your calendar has been created. Please check your email for the invite.')
-    update_state(msg_id, 'add.term#1')
-    client.send_text(msg_id, "To get started, lets add a term. What is the term name?")
-    
 def do_help(message, msg_id, text):
     client.send_text(msg_id, 'Here are the commands you can use:')
     client.send_text(msg_id, "To add an item, say 'add <item>'. You can add a term, subject, class, homework, exam, activity and meeting")

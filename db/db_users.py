@@ -21,7 +21,10 @@ def get_user(id=None, msg_id=None):
 		'last_name': user[2],
 		'msg_id': user[3],
 		'email': user[4],
-		'password': user[5]
+		'password': user[5],
+		'calendar': user[6],
+		'other_calendars': user[7],
+		'timezone': user[8]
 	}
 
 

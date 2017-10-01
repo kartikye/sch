@@ -14,9 +14,11 @@ service = build('calendar', 'v3', http=http)
 db = db_config.create_db_connection()
 
 def create_calendar(user_id):
+    user = db.execute('select first_name, timezone, email from Users where user_id = '+ str(user_id)).fetchone()
+    print(user)
     calendar = {
-        'summary': db.execute('select first_name from Users where user_id = '+ str(user_id)).fetchone()[0] + "'s Schedule",
-        'timeZone': 'America/Los_Angeles'
+        'summary': user[0] + "'s Schedule",
+        'timeZone': user[1]
     }
 
     created_calendar = service.calendars().insert(body=calendar).execute()
@@ -26,7 +28,7 @@ def create_calendar(user_id):
     rule = {
         'scope': {
             'type': 'user',
-            'value': db.execute('select email from Users where user_id = '+ str(user_id)).fetchone()[0],
+            'value': user[2],
         },
         'role': 'writer'
     }
@@ -63,33 +65,49 @@ def test():
         print(start, event['summary'])
 
 def add_class(class_id):
-    cls = db_classes.get_class(class_id)
-    event = {
-        'summary': cls['subject']['subject']+': '+cls['module'],
-        'location': cls['location'],
-        'start': {
-            'dateTime': '',
-            'timeZone': 'America/Los_Angeles',
-        },
-        'end': {
-            'dateTime': '2015-05-28T17:00:00-07:00',
-            'timeZone': 'America/Los_Angeles',
-        },
-        'recurrence': [
-            'RRULE:FREQ=DAILY;COUNT=2'
-        ],
-        'attendees': [
-            {'email': 'lpage@example.com'},
-            {'email': 'sbrin@example.com'},
-        ],
-        'reminders': {
-            'useDefault': False,
-            'overrides': [
-                {'method': 'email', 'minutes': 24 * 60},
-                {'method': 'popup', 'minutes': 10},
+    try:
+        cls = db_classes.get_class(class_id)
+        user = db.execute('select timezone, calendar from Users where user_id = ?', (cls['userid'],)).fetchone()
+        repeat = cls['repeat'].split(' ')
+        r_string = ''
+        switch = {
+            'm': 'MO',
+            't': 'TU',
+            'w': 'WE',
+            'th': 'TH',
+            'f': 'FR',
+            's': 'SA',
+            'su': 'SU',
+            '': ''
+        }
+        for r in repeat:
+            r_string += switch[r] + ','
+        
+        r_string = r_string[0:-1]
+        
+        event = {
+            'summary': cls['subject']['subject']+': '+cls['module'],
+            'location': cls['location'],
+            'start': {
+                'dateTime': str(cls['term']['start'].at(int(cls['start_time'].split(':')[0]), int(cls['start_time'].split(':')[1]),0).timezone_(user[0]).in_tz('utc')),
+                'timeZone': user[0],
+            },
+            'end': {
+                'dateTime': str(cls['term']['start'].at(int(cls['end_time'].split(':')[0]), int(cls['end_time'].split(':')[1]), 0).timezone_(user[0]).in_tz('utc')),
+                'timeZone': user[0]
+            },
+            'recurrence': [
+                'RRULE:FREQ=WEEKLY;BYDAY='+r_string+';UNTIL='+cls['term']['end'].format('%Y%m%d') + 'T' + cls['term']['end'].format('%H%M%S') + 'Z'
             ],
-        },
-    }
-
-    event = service.events().insert(calendarId='primary', body=event).execute()
-    print 'Event created: %s' % (event.get('htmlLink'))
+        }
+    
+        event = service.events().insert(calendarId=user[1], body=event).execute()
+        print(event)
+        
+        event_id = event['id']
+        db_classes.set_event_id(class_id, event_id)
+        return 1
+    except:
+        return 0
+        
+    #print 'Event created: %s' % (event.get('htmlLink'))

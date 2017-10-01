@@ -1,14 +1,15 @@
 import sqlite3
 from pendulum import Pendulum
+import pendulum
 
-from db import db_config
+from db import db_config, db_users
 
-sqlite.register_adapter(Pendulum, lambda val: val.isoformat(' '))
+sqlite3.register_adapter(Pendulum, lambda val: val.isoformat(' '))
 
 db = db_config.create_db_connection()
 
 def insert_term(user_id, name, start, end):
-	if db.execute('select * from Terms where name = ? and user_id = ?', (name, user_id)).fetchone() is None:
+	if db.execute('select * from Terms where name = ? and userid = ?', (name, user_id)).fetchone() is None:
 		db.execute('insert into Terms null,?,?,?,?', [user_id, name, start, end]);
 	else:
 		return 0
@@ -16,8 +17,11 @@ def insert_term(user_id, name, start, end):
 	return 1
 
 def get_terms(id=None, user_id=None):
-	terms = db.execute('select * from Terms where id = ? or user_id = ?', [id, user_id]).fetchall()
-	return [{'id': t[0], 'user_id': t[1], 'name': t[2], 'start': user[3], 'end': user[4]} for t in terms]
+	terms = db.execute('select * from Terms where id = ? or userid = ?', [id, user_id]).fetchall()
+	terms = [{'id': t[0], 'user_id': t[1], 'name': t[2], 'start': pendulum.parse(t[3]), 'end': pendulum.parse(t[4])} for t in terms]
+	if len(terms) == 1:
+		return terms[0]
+	return terms
 
 
 def update_term(id, user_id=None, name=None, start=None, end=None):
