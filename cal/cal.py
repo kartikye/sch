@@ -108,6 +108,11 @@ def add_class(class_id):
         db_classes.set_event_id(class_id, event_id)
         return 1
     except:
+        db_classes.delete(class_id)
         return 0
         
     #print 'Event created: %s' % (event.get('htmlLink'))
+
+def delete_class_event(event_id):
+    
+    service.events().delete(calendarId='primary', eventId='eventId').execute()

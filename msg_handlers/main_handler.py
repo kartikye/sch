@@ -5,7 +5,10 @@ import requests, json, config
 import pendulum
 db = db_config.create_db_connection()
 from cal import cal
+from msg_handlers import responses
 import re
+
+responses = responses.responses
 
 states = {}
 
@@ -23,7 +26,7 @@ def handle(message):
         data = client.get_user_data(msg_id)
         db_users.insert_user(data['first_name'], data['last_name'], msg_id, '')
         update_state(msg_id, 'setup#0')
-        client.send_text(msg_id, "Hi " + data['first_name'] + ', thank you for using Schej! Schej will help you schedule you life and classes! Please enter your email so that we can send you a calendar.')
+        client.send_text(msg_id, responses['setup']['greet'].format(data['first_name']))
         return
     
     status = db.execute('select status from Conversation where msg_id = ?', (msg_id,)).fetchone()[0]
@@ -32,11 +35,11 @@ def handle(message):
 
     if 'mistake' in message['message']['nlp']['entities'] and message['message']['nlp']['entities']['mistake'][0]['confidence'] > .9:
         if message['message']['nlp']['entities']['mistake'][0]['value'] == 'fuck':
-            client.send_text(msg_id, 'Do you talk to your mother with that mouth??')
-        client.send_text(msg_id, 'No problem, try again!')
+            client.send_text(msg_id, responses['cancel']['insult'])
+        client.send_text(msg_i, responses['cancel']['try_again'])
         return
     if 'exit' in message['message']['nlp']['entities'] and message['message']['nlp']['entities']['exit'][0]['confidence'] > .9:
-        client.send_text(msg_id, 'Cancelling action')
+        client.send_text(msg_id, responses['cancel']['exit'])
         update_state(msg_id, '')
         return
 
@@ -66,13 +69,13 @@ def do_add(message, msg_id, text):
     item =  message['nlp']['entities']['item'][0]['value']
     if item == 'term':
         update_state(msg_id, 'add.term#1')
-        client.send_text(msg_id, "What is the term name?")
+        client.send_text(msg_id, responses['term']['name'])
     elif item == 'subject':
         if len(db.execute('select Terms.name from Terms join Users on Users.user_id = Terms.userid where Users.msg_id = ?', (msg_id,)).fetchall()) == 0:
-            client.send_text(msg_id, 'There are no terms, please add a term first.')
+            client.send_text(msg_id, responses['term']['no_term'])
             return
         update_state(msg_id, 'add.subject#1')
-        client.send_text(msg_id, "What is the subject?")
+        client.send_text(msg_id, responses['subject']['what'])
     elif item == 'class':
         ask_to_add_class(msg_id)
     elif item == 'homework':
@@ -80,7 +83,7 @@ def do_add(message, msg_id, text):
     elif item == 'activity':
         pass
     elif item == 'meeting':
-        pass
+        i = 1/0
     else:
         pass
     
@@ -98,32 +101,31 @@ def setup(message, msg_id, text, status):
             states[msg_id]['setup']['email'] = text
             ask_affirmation(msg_id, 'Is '+text+' correct?')
         else:
-            client.send_text(msg_id, ':(')
-            client.send_text(msg_id, text + ' does not seem like a valid email. Please try again.')
+            client.send_text(msg_id, [responses['emoji']['sad'], ['email']['invalid'].format(text)])
     if step == 1:
         if 'affirmation' in message['nlp']['entities']:
             db.execute('update Users set email = ? where msg_id = ?', (states[msg_id]['setup']['email'], msg_id))
             db.commit()
             update_state(msg_id, 'setup#2')
-            client.send_text(msg_id, 'Which city so you live in? (We need to find your timezone for your calendar)')
+            client.send_text(msg_id, responses['setup']['city'])
         else:
             update_state(msg_id, 'setup#0')
             client.send_text(msg_id, ':(')
-            client.send_text(msg_id, 'Please enter your email again!')
+            client.send_text(msg_id, responses['setup']['reenter_email'])
     if step == 2:
         try:
             coordinates = json.loads(requests.get('http://maps.googleapis.com/maps/api/geocode/json?address='+text+',+CA&sensor=false').text)['results'][0]['geometry']['location']
             timezone = json.loads(requests.get('https://maps.googleapis.com/maps/api/timezone/json?location='+str(coordinates['lat'])+','+str(coordinates['lng'])+'&timestamp='+str(pendulum.now().int_timestamp)+'&sensor=false').text)['timeZoneId']
         except Exception as e:
             print(e)
-            client.send_text(msg_id,"Sorry, we couldn't find that timezone. Please try again.")
+            client.send_text(msg_id, responses['setup']['timezone_error'])
             return
         db.execute('update Users set timezone = ? where msg_id = ?', (timezone, msg_id))
         db.commit()
         cal.create_calendar(db.execute('select user_id from Users where msg_id = ?', (msg_id,)).fetchone()[0])
-        client.send_text(msg_id, 'Your calendar has been created. Please check your email for the invite.')
+        client.send_text(msg_id, responses['setup']['done'])
         update_state(msg_id, 'add.term#1')
-        client.send_text(msg_id, "To get started, lets add a term. What is the term name?")
+        client.send_text(msg_id, responses['setup']['start'])
             
             
 #Add a term
@@ -136,31 +138,31 @@ def add_term(message, msg_id, text, status):
             states[msg_id]['term'] = []
             states[msg_id]['term'].append(text)
         update_state(msg_id, 'add.term#2')
-        client.send_text(msg_id, 'When does the term start?')
+        client.send_text(msg_id, responses['term']['start'])
     elif step == 2:
         try:
             states[msg_id]['term'].append(pendulum.parse(text))
         except Exception as e:
-            client.send_text(msg_id, 'That is an invalid date, please try again')
+            client.send_text(msg_id, responses['term']['invalid_date'])
             return
         update_state(msg_id, 'add.term#3')
-        client.send_text(msg_id, 'When does the term end?')
+        client.send_text(msg_id, responses['term']['end'])
     elif step == 3:
         try:
             states[msg_id]['term'].append(pendulum.parse(text))
         except Exception as e:
-            client.send_text(msg_id, 'That is an invalid date, please try again')
+            client.send_text(msg_id, responses['term']['invalid_date'])
             return
         update_state(msg_id, '')
         user_id = db.execute('select user_id from Users where msg_id = ?', (msg_id,)).fetchone()[0]
         lastrowid = db.execute('insert into Terms (userid, name, start, end) values(?,?,?,?)', (user_id, states[msg_id]['term'][0], states[msg_id]['term'][1], states[msg_id]['term'][2])).lastrowid
         db.commit()
         if lastrowid:
-            client.send_text(msg_id, 'Term added')
             update_state(msg_id, 'add.term#4')
-            ask_affirmation(msg_id,'Do you want to add a subject?')
+            client.send_text(msg_id, responses['term']['success'])
+            ask_affirmation(msg_id, responses['term']['post'])
         else:
-            client.send_text(msg_id, 'Term could not be added')
+            client.send_text(msg_id, responses['term']['error'])
             states[msg_id]['term'] = []
     elif step == 4:
         if 'affirmation' in message['message']['nlp']['entities']:
@@ -170,7 +172,7 @@ def add_term(message, msg_id, text, status):
             else:
                 states[msg_id]['subject'] = {'term': states[msg_id]['term'][0]}
             update_state(msg_id, 'add.subject#1')
-            client.send_text(msg_id, 'What is the subject?')
+            client.send_text(msg_id, responses['subject']['what'])
         else:
             states[msg_id]['term'] = []
             update_state(msg_id, '')
@@ -180,8 +182,8 @@ def add_subject(message, msg_id, text, status):
         db.execute('insert into Subjects (userid, term_id, subject) values (?,?,?)', (db.execute('select user_id from Users where msg_id=?',(msg_id,)).fetchone()[0], db.execute('select id from Terms where name=?', (term,)).fetchone()[0], states[msg_id]['subject']['name']))
         db.commit()
         update_state(msg_id, 'add.subject#3')
-        client.send_text(msg_id, 'Subject Added')
-        ask_affirmation(msg_id, 'Do you want to add a class?')
+        client.send_text(msg_id, responses['subject']['success'])
+        ask_affirmation(msg_id, responses['subject']['post'])
         
     step = int(status.split('#')[1])
     if step == 1:
@@ -194,11 +196,11 @@ def add_subject(message, msg_id, text, status):
         qr =  [QuickReply(y[0],y[0]) for y in db.execute('select Terms.name from Terms join Users on Users.user_id = Terms.userid where Users.msg_id = ?', (msg_id,)).fetchall()]
         if len(qr) == 0:
             update_state(msg_id, '')
-            client.send_text(msg_id, 'There are no terms, please add a term first.')
+            client.send_text(msg_id, responses['term']['no_term'])
         if 'term' in states[msg_id]['subject']:
             insert_subject(states[msg_id]['subject']['term'])
         else:
-            client.send_quick_replies(msg_id, 'What term is the subject in?', qr)
+            client.send_quick_replies(msg_id, responses['subject']['term'], qr)
     if step == 2:
         insert_subject(text)
     if step == 3:
@@ -223,27 +225,26 @@ def add_class(message, msg_id, text, status):
             'values (?,?,?,?,?,?,?,?)',\
             (user_id, subject['term_id'], subject['id'], states[msg_id]['class']['module'], states[msg_id]['class']['start_time'], states[msg_id]['class']['end_time'], states[msg_id]['class']['repeat'], states[msg_id]['class']['location']))
             db.commit()
-            if cal.add_class(cursor.lastrowid)
-                client.send_text(msg_id, 'Class added!')
+            if cal.add_class(cursor.lastrowid):
+                client.send_text(msg_id, responses['class']['success'])
             else:
-                client.send_text(msg_id, 'Oops! Something went wrong')
+                client.send_text(msg_id, responses['error']['general'])
             update_state(msg_id, '')
             
         else:
             update_state(msg_id, '')
-            client.send_text(msg_id, 'Option to update coming soon!')
+            client.send_text(msg_id, responses['error']['not_Implemented'])
 
 def ask_to_add_class(msg_id):
     qr =  [QuickReply(y[0],y[0]) for y in db.execute('select Subjects.subject from Subjects join Users on Users.user_id = Subjects.userid where Users.msg_id = ?', (msg_id,)).fetchall()]
     if len(qr) == 0:
-        client.send_text(msg_id, 'No subjects found. Please add a subject to add a class.')
+        client.send_text(msg_id, responses['subject']['no_subject'])
         return
-    client.send_buttons(msg_id, 'Please create the class by clicking the link', [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
+    client.send_buttons(msg_id, responses['class']['link'], [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
     update_state(msg_id, 'add.class#1')
         
 def do_help(message, msg_id, text):
-    client.send_text(msg_id, 'Here are the commands you can use:')
-    client.send_text(msg_id, "To add an item, say 'add <item>'. You can add a term, subject, class, homework, exam, activity and meeting")
+    client.send_text(msg_id, responses['help'])
     update_state(msg_id, '')
     
 def ask_affirmation(msg_id, question):

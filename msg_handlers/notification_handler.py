@@ -5,6 +5,9 @@ import requests, json, config
 import pendulum
 db = db_config.create_db_connection()
 from run import client
+from msg_handlers import responses
+
+responses = responses.responses
 
 sent = []
 
@@ -20,7 +23,7 @@ def handle():
             event_id = events[0]['id'] 
             if event_id not in sent and pendulum.parse(events[0]['start']['dateTime']) > pendulum.now(user[2]):
                 sent.append(event_id)
-                client.send_text(msg_id, 'Hi, you have '+events[0]['summary'] +' at ' + pendulum.parse(events[0]['start']['dateTime']).format('%I:%M %p'))
+                client.send_text(msg_id, responses['notification']['single_event'].format(events[0]['summary'], pendulum.parse(events[0]['start']['dateTime']).format('%I:%M %p')))
         elif len(events) > 1:
             to_send = []
             for event in events:
@@ -28,6 +31,6 @@ def handle():
                     to_send.append(event)
                     sent.append(event['id'])
             if len(to_send) > 0:
-                client.send_text(msg_id, 'Hi, you have a few events coming up: '+ ','.join([e['summary'] for e in to_send]))
+                client.send_text(msg_id,  responses['notification']['multiple_events'].format(','.join([e['summary'] for e in to_send])))
         
         

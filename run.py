@@ -8,10 +8,11 @@ client = Messager(config.facebook_access_token)
 import os
 import json
 
-from msg_handlers import main_handler, notification_handler
+from msg_handlers import main_handler, notification_handler, responses
 import traceback
 from webviews.webviews import webview
 
+responses = responses.responses
 
 
 app = Flask(__name__)
@@ -45,6 +46,8 @@ def fb_receive_message():
                     print('-----------------------------------')
                     traceback.print_exc()
                     print('-----------------------------------')
+                    client.send_text('1628181117202388', ['Hi boss, \nAn error occured when a user sent the following message:', message['message']['text'], 'Here is the error:','```C\n'+traceback.format_exc()+'\n```'])
+                    client.send_text(message['sender']['id'], responses['error']['general'])
 
     return "Hi", 200
 

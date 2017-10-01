@@ -1,5 +1,6 @@
 import sqlite3
 from pendulum import Pendulum
+from cal import cal
 
 from db import db_config, db_subjects, db_terms
 
@@ -26,6 +27,13 @@ def get_class(class_id):
 	ret['term'] = db_terms.get_terms(id=ret['term'])
 	
 	return ret
+	
+def delete(class_id):
+	cls = db.execute('select * from Classes where id = ?', [class_id]).fetchone()
+	if cls[9]:
+		cal.delete_class_event(cls[9])
+	db.execute('delete from classes where id = ?',(class_id,))
+	db.commit()
 	
 def set_event_id(class_id, event_id):
 	db.execute('update Classes set event_id = ? where id = ?', (event_id, class_id))
