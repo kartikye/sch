@@ -46,7 +46,7 @@ def delete_calendar(user_id):
     service.calendars().delete(cal_id).execute()
 
 def get_near_events(calendar_id):
-    events = service.events().list(calendarId=calendar_id, timeMax=pendulum.utcnow().add(minutes=15).to_rfc3339_string(), singleEvents=True, maxResults=2).execute()
+    events = service.events().list(calendarId=calendar_id, timeMin=pendulum.utcnow().to_rfc3339_string(), timeMax=pendulum.utcnow().add(minutes=15).to_rfc3339_string(), singleEvents=True, maxResults=2).execute()
     return events['items']
     
 def test():

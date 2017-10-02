@@ -15,7 +15,8 @@ from webviews.webviews import webview
 responses = responses.responses
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path="/static", static_folder="webviews/static")
+
 
 app.register_blueprint(webview, url_prefix='/webviews')
 
@@ -36,7 +37,7 @@ def fb_receive_message():
     print(message_entries)
     for entry in message_entries:
         for message in entry['messaging']:
-            if message.get('message'):
+            if message.get('message') and 'attachments' not in message['message']:
                 try:
                     main_handler.handle(message)
                     print("{sender[id]} says {message[text]}".format(**message))

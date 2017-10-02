@@ -9,6 +9,11 @@ from msg_handlers import responses
 
 responses = responses.responses
 
+def loud_print(s):
+    print('#######################################')
+    print(s)
+    print('#######################################')
+
 sent = []
 
 def handle():
@@ -19,15 +24,16 @@ def handle():
         if (user[1] == ''):
             return
         events = cal.get_near_events(user[1])
+        loud_print(events)
         if len(events) == 1:
             event_id = events[0]['id'] 
-            if event_id not in sent and pendulum.parse(events[0]['start']['dateTime']) > pendulum.now(user[2]):
+            if event_id not in sent and pendulum.parse(events[0]['start']['dateTime']).time() > pendulum.now(user[2]).time():
                 sent.append(event_id)
                 client.send_text(msg_id, responses['notification']['single_event'].format(events[0]['summary'], pendulum.parse(events[0]['start']['dateTime']).format('%I:%M %p')))
         elif len(events) > 1:
             to_send = []
             for event in events:
-                if event['id'] not in sent and pendulum.parse(event['start']['dateTime']) > pendulum.now(user[2]):
+                if event['id'] not in sent and pendulum.parse(event['start']['dateTime']).time() > pendulum.now(user[2]).time():
                     to_send.append(event)
                     sent.append(event['id'])
             if len(to_send) > 0:

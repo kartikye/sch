@@ -78,8 +78,8 @@ def do_add(message, msg_id, text):
         client.send_text(msg_id, responses['subject']['what'])
     elif item == 'class':
         ask_to_add_class(msg_id)
-    elif item == 'homework':
-        pass
+    elif item == 'homework' or item == 'task':
+        ask_to_add_task(msg_id)
     elif item == 'activity':
         pass
     elif item == 'meeting':
@@ -240,9 +240,39 @@ def ask_to_add_class(msg_id):
     if len(qr) == 0:
         client.send_text(msg_id, responses['subject']['no_subject'])
         return
-    client.send_buttons(msg_id, responses['class']['link'], [ActionButton(ButtonType.WEB_URL, "Add class", "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
+    client.send_buttons(msg_id, responses['class']['link'], [ActionButton(ButtonType.WEB_URL, responses['class']['add'], "https://winami.io/webviews/add_class", webview_height=WebviewType.TALL, messenger_extention=True)])
     update_state(msg_id, 'add.class#1')
-        
+
+def add_task(message, msg_id, text, status):
+    step = int(status.split('#')[1])
+    if step == 1:
+        if 'affirmation' in message['message']['nlp']['entities']:
+            user = db_users.get_user(msg_id=msg_id)
+            if states[msg_id]['task']['subject'] != 'no_subject':
+                subject = db_subjects.get_subject(subject=states[msg_id]['class']['subject'])['id']
+            else:
+                subject = None
+            cursor = db.execute('insert into Tasks'\
+            '(userid, subject_id, name, due, time_left) '\
+            'values (?,?,?,?,?)',\
+            (user['id'], subject, states[msg_id]['task']['name'],\
+            pendulum.parse(states[msg_id]['task']['due_date'] + '  ' + states[msg_id]['task']['due_time'], user['timezone']),
+            int(states[msg_id]['task']['time_left'])))
+            db.commit()
+            if cal.add_class(cursor.lastrowid):
+                client.send_text(msg_id, responses['class']['success'])
+            else:
+                client.send_text(msg_id, responses['error']['general'])
+            update_state(msg_id, '')
+            
+        else:
+            update_state(msg_id, '')
+            client.send_text(msg_id, responses['error']['not_Implemented'])
+
+def ask_to_add_task(msg_id):
+    client.send_buttons(msg_id, responses['task']['link'], [ActionButton(ButtonType.WEB_URL, responses['task']['add'], "https://winami.io/webviews/add_task", webview_height=WebviewType.TALL, messenger_extention=True)])
+    update_state(msg_id, 'add.class#1')
+
 def do_help(message, msg_id, text):
     client.send_text(msg_id, responses['help'])
     update_state(msg_id, '')

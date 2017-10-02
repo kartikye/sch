@@ -40,53 +40,18 @@
         
             var submit = function() {
                 var subject = document.getElementsByName('subject')[0].value
-                var module = document.getElementsByName('module')[0].value
-                var start_time = document.getElementsByName('start_time')[0].value
-                var end_time = document.getElementsByName('end_time')[0].value
-                var m = document.getElementById('m').checked
-                var t = document.getElementById('t').checked
-                var w = document.getElementById('w').checked
-                var th = document.getElementById('th').checked
-                var f = document.getElementById('f').checked
-                var s = document.getElementById('s').checked
-                var su = document.getElementById('su').checked
-                var location = document.getElementsByName('location')[0].value
-                
-                if (subject == '' || module == '' || start_time == '' || end_time =='' || !(m || t || w || th || f || s || su)) {
+                var name = document.getElementsByName('name')[0].value
+                var due_date = document.getElementsByName('due_date')[0].value
+                var due_time = document.getElementsByName('due_time')[0].value
+                var time_left = document.getElementsByName('time_left')[0].value
+
+                if (subject == '' || name == '' || due_date == '' || due_time == '' || time_left =='') {
                     alert('Please fill in the fields')
                     return
                 }
                 
-                var repeat = ''
-                if (m){
-                    repeat += 'm '
-                }
                 
-                if (t){
-                    repeat += 't '
-                }
-                
-                if (w){
-                    repeat += 'w '
-                }
-                
-                if (th){
-                    repeat += 'th '
-                }
-                
-                if (f){
-                    repeat += 'f '
-                }
-                
-                if (s){
-                    repeat += 's '
-                }
-                
-                if (su){
-                    repeat += 'su '
-                }
-                
-                nanoajax.ajax({url: 'https://winami.io/webviews/add_class', method: 'POST', body: 'id='+id+'&subject='+subject+'&module='+module+'&start_time='+start_time+'&end_time='+end_time+'&repeat='+repeat+'&location='+location}, function (code, responseText, request) {
+                nanoajax.ajax({url: 'https://winami.io/webviews/add_class', method: 'POST', body: 'id='+id+'&subject='+subject+'&due_date='+due_date+'&due_time='due_time+'&name='+name+'&time_left='+time_left}, function (code, responseText, request) {
                     MessengerExtensions.requestCloseBrowser(function success() {
   
                     }, function error(err) {
@@ -102,47 +67,24 @@
             <label>Subject</label>
             <br>
             <select type="text" name="subject" id ="subject">
+                <option value="no_subject">No Subject</option>
             </select>
             <br>
-            <label>Class Module</label>
+            <label>Task Name</label>
             <br>
-            <input type="text" name="module"/>
+            <input type="text" name="name"/>
             <br>
-            <label for="">Start Time</label>
+            <label for="">Due Date</label>
             <br>
-            <input type="time" name="start_time" placeholder="14:10"/>
+            <input type="date" name="due_date" placeholder="14:10"/>
             <br>
-            <label for="">End Time</label>
+            <label for="">Due Time</label>
             <br>
-            <input type="time" name="end_time" placeholder="16:00"/>
+            <input type="time" name="due_time" placeholder="23/08/2017"/>
             <br>
-            <label for="">Repeat on</label>
+            <label for="">How long do you think it will take to complete? (Minutes)</label>
             <br>
-            <div class="checkbox_letter">
-                m<input type="checkbox" id="m"/>
-            </div> 
-            <div class="checkbox_letter">
-                t<input type="checkbox" id="t"/>
-            </div>
-            <div class="checkbox_letter">
-                w<input type="checkbox" id="w"/>
-            </div>
-            <div class="checkbox_letter">
-                th<input type="checkbox" id="th"/>
-            </div>
-            <div class="checkbox_letter">
-                f<input type="checkbox" id="f"/>
-            </div> 
-            <div class="checkbox_letter">
-                s<input type="checkbox" id="s"/>
-            </div> 
-            <div class="checkbox_letter">
-                su<input type="checkbox" id="su"/>
-            </div>
-            <br>
-            <label for="">Location</label>
-            <br>
-            <input type="text" name="location" placeholder="Soda 310"/>
+            <input type="number" name="time_left" placeholder="180"/>
             <br>
             <br>
             <button onclick="submit()">Submit</button>

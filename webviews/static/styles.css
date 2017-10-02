@@ -1,0 +1,52 @@
+*{
+    font-family: 'SFUIText-Regular', 'Segoe UI', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif';
+}
+
+select, input, button{
+    border: 1px solid #E5E5E5;
+    margin-bottom: 10px;
+}
+
+select, input[type="text"], input[type="time"], input[type="date"], input[type="number"]{
+    width: 80%;
+    height: 20px;
+}
+
+input[type="checkbox"] {
+    border: 1px solid #E5E5E5;
+    border-radius: 5px;
+}
+
+button {
+    border-radius: 4px;
+    background-color: #0084FF;
+    color: white;
+    padding: 6px 14px 8px 14px;
+    margin-top: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    box-shadow: 0 3px 0 #e8e8e8;
+    width: 60%;
+    margin-left: 30px;
+}
+
+button:hover {
+    box-shadow: 0 0px 0 #e8e8e8;
+}
+
+body{
+    display: flex;
+    justify-content: center;
+}
+
+#form {
+    width: 300px;
+    padding-left: 30px;
+    margin-top: 30px;
+}
+
+.checkbox_letter{
+    width: 19.3px;
+    text-align: center;
+    display: inline-block;
+}

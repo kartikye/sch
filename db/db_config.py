@@ -24,7 +24,7 @@ db.execute('create table if not exists Subjects (id integer primary key autoincr
 db.execute('create table if not exists Classes (id integer primary key autoincrement, userid integer, term_id integer, subject_id integer, module text, start_time text, end_time text, repeat text, location text, event_id text)')
 
 #create homework
-db.execute('create table if not exists Homework (id integer primary key autoincrement, userid integer, term_id integer, subject_id integer, name text, due date, time_left integer)')
+db.execute('create table if not exists Tasks (id integer primary key autoincrement, userid integer, subject_id integer, name text, due date, time_left integer)')
 
 #create conversation
 db.execute('create table if not exists Conversation (id integer primary key autoincrement, userid integer, msg_id text, status text)')
