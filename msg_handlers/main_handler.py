@@ -297,13 +297,14 @@ def report_issue(message, msg_id, text, status):
             client.send_text(msg_id, responses['report']['success'])
         else:
             client.send_text(msg_id, responses['report']['error'])
+        update_state(msg_id, '')
         
 def do_help(message, msg_id, text):
     client.send_text(msg_id, responses['help'])
     update_state(msg_id, '')
 
 def do_report_issue(message, msg_id, text):
-    update_state(msg_id, 'resport.issue#0')
+    update_state(msg_id, 'report.issue#0')
     client.send_text(msg_id, responses['report']['pre'])
     
 def ask_affirmation(msg_id, question):

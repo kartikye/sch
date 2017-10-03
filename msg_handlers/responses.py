@@ -7,7 +7,7 @@ responses = {
         'done': ['Woohoo!!!', 'Your calendar has been created. Please check your email for the invite. :)'],
         'start': 'To get started, lets add a term. What is the term name?',
     },
-    'help': ['Here are the commands you can use:',  'To add an item, say \'add <item>\'. You can add a term, subject, class, homework, exam, activity and meeting'],
+    'help': ['Here are the commands you can use:',  'To add an item, say \'add <item>\'. You can add a term, subject, class and task (coming soon: exam, activity and meeting)', 'To report an issue, say \'report an issue\''],
     'cancel': {
         'insult': ['👿','Do you talk to your mother with that mouth??'],
         'try_again': 'No problem, try again!',

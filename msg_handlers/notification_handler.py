@@ -24,7 +24,6 @@ def handle():
         if (user[1] == ''):
             return
         events = cal.get_near_events(user[1])
-        loud_print(events)
         if len(events) == 1:
             event_id = events[0]['id'] 
             if event_id not in sent and pendulum.parse(events[0]['start']['dateTime']).time() > pendulum.now(user[2]).time():
