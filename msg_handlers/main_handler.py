@@ -7,7 +7,7 @@ db = db_config.create_db_connection()
 from cal import cal
 from msg_handlers import responses
 import re
-
+from github import github
 responses = responses.responses
 
 states = {}
@@ -22,7 +22,6 @@ def handle(message):
     text = message['message']['text']
     
     if  db.execute('select * from Users where msg_id = ?', (msg_id,)).fetchone() is None:
-        #data = json.loads(requests.get('https://graph.facebook.com/v2.6/'+msg_id+'?fields=first_name,last_name&access_token='+config.facebook_access_token).text)
         data = client.get_user_data(msg_id)
         db_users.insert_user(data['first_name'], data['last_name'], msg_id, '')
         update_state(msg_id, 'setup#0')
@@ -50,7 +49,8 @@ def handle(message):
         'add.subject': add_subject,
         'add.class': add_class,
         'add.task': add_task,
-        'report.issue': report_issue
+        'report.issue': report_issue,
+        'request.feature': request_feature
     }
     
     switch[status.split('#')[0]](message, msg_id, text, status)
@@ -67,7 +67,10 @@ def no_status(message, msg_id, text, status):
     elif 'help' in entities:
         do_help(message, msg_id, text)
     elif 'report_issue' in entities:
-        do_report_issue(message, msg_id, text)
+        report_issue(message, msg_id, text)
+    elif 'request_feature' in entities:
+        update_state('request.feature#0')
+        request_feature(message, msg_id, text)
         
 def do_add(message, msg_id, text):
     print('do_add')
@@ -87,9 +90,9 @@ def do_add(message, msg_id, text):
     elif item == 'homework' or item == 'task':
         ask_to_add_task(msg_id)
     elif item == 'activity':
-        pass
+        client.send_text(msg_id, responses['error']['not_Implemented'])
     elif item == 'meeting':
-        i = 1/0
+        client.send_text(msg_id, responses['error']['not_Implemented'])
     else:
         pass
     
@@ -132,7 +135,6 @@ def setup(message, msg_id, text, status):
         client.send_text(msg_id, responses['setup']['done'])
         update_state(msg_id, 'add.term#1')
         client.send_text(msg_id, responses['setup']['start'])
-            
             
 #Add a term
 def add_term(message, msg_id, text, status):
@@ -217,8 +219,7 @@ def add_subject(message, msg_id, text, status):
             states[msg_id]['class']['subject'] = states[msg_id]['subject']['name']
             ask_to_add_class(msg_id)
         states[msg_id]['subject'] = {}
-            
-            
+
 def add_class(message, msg_id, text, status):
     step = int(status.split('#')[1])
     if step == 1:
@@ -279,33 +280,35 @@ def ask_to_add_task(msg_id):
     client.send_buttons(msg_id, responses['task']['link'], [ActionButton(ButtonType.WEB_URL, responses['task']['add'], "https://winami.io/webviews/add_task", webview_height=WebviewType.TALL, messenger_extention=True)])
     update_state(msg_id, 'add.task#1')
 
-def report_issue(message, msg_id, text, status):
+def report_issue(message, msg_id, text, status=None):
+    if not status:
+        update_state(msg_id, 'report.issue#1')
+        client.send_text(msg_id, responses['report']['pre'])
+        return
     step = int(status.split('#')[1])
-    if step == 0:
-        url = 'https://api.github.com/repos/kartikye/sch/issues'
-        session = requests.Session()
-        session.auth = (config.github_username_bot, config.github_password_bot)
-        
-        issue = {
-            'title': text[:20]+'...',
-            'body': text,
-            'labels': ['user_submitted_issue']
-        }
-        
-        r = session.post(url, json.dumps(issue))
-        if r.status_code == 201:
+    if step == 1:
+        if github.insert_issue(text, 'user_submitted_issue'):
             client.send_text(msg_id, responses['report']['success'])
         else:
             client.send_text(msg_id, responses['report']['error'])
+        update_state(msg_id, '')
+
+def request_feature(message, msg_id, text, status=None):
+    if not status:
+        update_state(msg_id, 'request.feature#1')
+        client.send_text(msg_id, responses['request_feature']['pre'])
+        return
+    step = int(status.split('#')[1])
+    if step == 1:
+        if github.insert_issue(text, 'user_requested_feature'):
+            client.send_text(msg_id, responses['request_feature']['success'])
+        else:
+            client.send_text(msg_id, responses['request_feature']['error'])
         update_state(msg_id, '')
         
 def do_help(message, msg_id, text):
     client.send_text(msg_id, responses['help'])
     update_state(msg_id, '')
-
-def do_report_issue(message, msg_id, text):
-    update_state(msg_id, 'report.issue#0')
-    client.send_text(msg_id, responses['report']['pre'])
     
 def ask_affirmation(msg_id, question):
     client.send_quick_replies(msg_id, question, [QuickReply('Yes', 'Yes'), QuickReply('No', 'No')])

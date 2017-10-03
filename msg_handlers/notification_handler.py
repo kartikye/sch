@@ -19,7 +19,6 @@ sent = []
 def handle():
     users = db.execute('select msg_id, calendar, timezone from Users').fetchall()
     for user in users:
-        print(user, user[1])
         msg_id = user[0]
         if (user[1] == ''):
             return

@@ -53,12 +53,17 @@ responses = {
     },
     'error': {
         'general': [':(', 'Oops! Something went wrong.'],
-        'not_Implemented': 'Option to update coming soon!'
+        'not_Implemented': 'This feature is in the works!'
     },
     'report': {
         'pre': ['I am extremely sorry :(', 'What is the issue?'],
         'success': ['Thank you very much for reporting the issue!', 'I will try my best to fix this asap!'],
         'error': 'Whoops! There is an issue with reporting issues. 🙃',  
+    },
+    'request_feature': {
+        'pre': 'What features would you like to see?',
+        'success': 'Yay, the feature has been requested.',
+        'error': 'Whoops! There was an issue :('
     },
     'emoji': {
         'sad': ':('

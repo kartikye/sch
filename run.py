@@ -49,6 +49,7 @@ def fb_receive_message():
                     print('-----------------------------------')
                     client.send_text('1628181117202388', ['Hi boss, \nAn error occured when a user sent the following message:', message['message']['text'], 'Here is the error:','```C\n'+traceback.format_exc()+'\n```'])
                     client.send_text(message['sender']['id'], responses['error']['general'])
+                    main_handler.update_state(message['sender']['id'], '')
 
     return "Hi", 200
 
