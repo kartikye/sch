@@ -48,20 +48,26 @@ def handle(message):
         'setup': setup,
         'add.term': add_term,
         'add.subject': add_subject,
-        'add.class': add_class
+        'add.class': add_class,
+        'add.task': add_task,
+        'report.issue': report_issue
     }
     
     switch[status.split('#')[0]](message, msg_id, text, status)
     
 def no_status(message, msg_id, text, status):
     message = message['message']
-    print(message['nlp']['entities'])
+    entities = message['nlp']['entities']
     
-    if 'action' in message['nlp']['entities']:
+    print(entities)
+    
+    if 'action' in entities:
         if message['nlp']['entities']['action'][0]['value'] == 'add':
             do_add(message, msg_id, text)
-    elif 'help' in message['nlp']['entities']:
+    elif 'help' in entities:
         do_help(message, msg_id, text)
+    elif 'report_issue' in entities:
+        do_report_issue(message, msg_id, text)
         
 def do_add(message, msg_id, text):
     print('do_add')
@@ -271,11 +277,34 @@ def add_task(message, msg_id, text, status):
 
 def ask_to_add_task(msg_id):
     client.send_buttons(msg_id, responses['task']['link'], [ActionButton(ButtonType.WEB_URL, responses['task']['add'], "https://winami.io/webviews/add_task", webview_height=WebviewType.TALL, messenger_extention=True)])
-    update_state(msg_id, 'add.class#1')
+    update_state(msg_id, 'add.task#1')
 
+def report_issue(message, msg_id, text, status):
+    step = int(status.split('#')[1])
+    if step == 0:
+        url = 'https://api.github.com/repos/kartikye/sch/issues'
+        session = requests.Session()
+        session.auth = (config.github_username_bot, config.github_password_bot)
+        
+        issue = {
+            'title': text[:20]+'...',
+            'body': text,
+            'labels': ['user_submitted_issue']
+        }
+        
+        r = session.post(url, json.dumps(issue))
+        if r.status_code == 201:
+            client.send_text(msg_id, responses['report']['success'])
+        else:
+            client.send_text(msg_id, responses['report']['error'])
+        
 def do_help(message, msg_id, text):
     client.send_text(msg_id, responses['help'])
     update_state(msg_id, '')
+
+def do_report_issue(message, msg_id, text):
+    update_state(msg_id, 'resport.issue#0')
+    client.send_text(msg_id, responses['report']['pre'])
     
 def ask_affirmation(msg_id, question):
     client.send_quick_replies(msg_id, question, [QuickReply('Yes', 'Yes'), QuickReply('No', 'No')])

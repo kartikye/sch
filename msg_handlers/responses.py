@@ -55,6 +55,11 @@ responses = {
         'general': [':(', 'Oops! Something went wrong.'],
         'not_Implemented': 'Option to update coming soon!'
     },
+    'report': {
+        'pre': ['I am extremely sorry :(', 'What is the issue?'],
+        'success': ['Thank you very much for reporting the issue!', 'I will try my best to fix this asap!'],
+        'error': 'Whoops! There is an issue with reporting issues. 🙃',  
+    },
     'emoji': {
         'sad': ':('
     }
