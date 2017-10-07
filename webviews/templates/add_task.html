@@ -51,7 +51,7 @@
                 }
                 
                 
-                nanoajax.ajax({url: 'https://winami.io/webviews/add_class', method: 'POST', body: 'id='+id+'&subject='+subject+'&due_date='+due_date+'&due_time='due_time+'&name='+name+'&time_left='+time_left}, function (code, responseText, request) {
+                nanoajax.ajax({url: 'https://winami.io/webviews/add_task', method: 'POST', body: 'id='+id+'&subject='+subject+'&due_date='+due_date+'&due_time='+due_time+'&name='+name+'&time_left='+time_left}, function (code, responseText, request) {
                     MessengerExtensions.requestCloseBrowser(function success() {
   
                     }, function error(err) {

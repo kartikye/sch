@@ -64,6 +64,10 @@ def no_status(message, msg_id, text, status):
     if 'action' in entities:
         if message['nlp']['entities']['action'][0]['value'] == 'add':
             do_add(message, msg_id, text)
+        if message['nlp']['entities']['action'][0]['value'] == 'update':
+            update_item(message, msg_id, text)
+    elif 'query'in entities:
+        do_query(message, msg_id, text)
     elif 'help' in entities:
         do_help(message, msg_id, text)
     elif 'report_issue' in entities:
@@ -86,6 +90,7 @@ def do_add(message, msg_id, text):
         update_state(msg_id, 'add.subject#1')
         client.send_text(msg_id, responses['subject']['what'])
     elif item == 'class':
+        print('HOEE')
         ask_to_add_class(msg_id)
     elif item == 'homework' or item == 'task':
         ask_to_add_task(msg_id)
@@ -119,8 +124,7 @@ def setup(message, msg_id, text, status):
             client.send_text(msg_id, responses['setup']['city'])
         else:
             update_state(msg_id, 'setup#0')
-            client.send_text(msg_id, ':(')
-            client.send_text(msg_id, responses['setup']['reenter_email'])
+            client.send_text(msg_id, responses['setup']['reenter_email'][-1])
     if step == 2:
         try:
             coordinates = json.loads(requests.get('http://maps.googleapis.com/maps/api/geocode/json?address='+text+',+CA&sensor=false').text)['results'][0]['geometry']['location']
@@ -256,20 +260,17 @@ def add_task(message, msg_id, text, status):
         if 'affirmation' in message['message']['nlp']['entities']:
             user = db_users.get_user(msg_id=msg_id)
             if states[msg_id]['task']['subject'] != 'no_subject':
-                subject = db_subjects.get_subject(subject=states[msg_id]['class']['subject'])['id']
+                subject = db_subjects.get_subject(subject=states[msg_id]['task']['subject'])['id']
             else:
                 subject = None
             cursor = db.execute('insert into Tasks'\
             '(userid, subject_id, name, due, time_left) '\
             'values (?,?,?,?,?)',\
             (user['id'], subject, states[msg_id]['task']['name'],\
-            pendulum.parse(states[msg_id]['task']['due_date'] + '  ' + states[msg_id]['task']['due_time'], user['timezone']),
+            pendulum.parse(states[msg_id]['task']['due_date'] + '  ' + states[msg_id]['task']['due_time'], tz=user['timezone']),
             int(states[msg_id]['task']['time_left'])))
             db.commit()
-            if cal.add_class(cursor.lastrowid):
-                client.send_text(msg_id, responses['class']['success'])
-            else:
-                client.send_text(msg_id, responses['error']['general'])
+            client.send_text(msg_id, responses['class']['success'])
             update_state(msg_id, '')
             
         else:
@@ -279,6 +280,61 @@ def add_task(message, msg_id, text, status):
 def ask_to_add_task(msg_id):
     client.send_buttons(msg_id, responses['task']['link'], [ActionButton(ButtonType.WEB_URL, responses['task']['add'], "https://winami.io/webviews/add_task", webview_height=WebviewType.TALL, messenger_extention=True)])
     update_state(msg_id, 'add.task#1')
+
+def update_item(message, msg_id, text, status=None):
+    if not status:
+        update_state(msg_id, 'update_item#1')
+        
+def do_query(message, msg_id, text, status=None):
+    entities = message['nlp']['entities']
+    if 'item' in entities:
+        item =  entities['item'][0]['value'].strip()
+    else:
+        client.send_text(msg_id, responses['error']['do_not_understand'])
+        return
+    has_subject = 'subject' in entities
+    has_date = 'datetime' in entities
+    if item == 'homework' or item == 'tasks' or item == 'task':
+        tasks = []
+        
+        if has_subject:
+            print(5)
+            if len(db.execute('select * from Subjects join Users on Users.user_id = Subjects.userid where msg_id = ? and subject = ?', (msg_id, entities['subject'][0]['value'])).fetchall()) > 0:
+                subject = entities['subject'][0]['value']
+            else:
+                client.send_text(msg_id, responses['subject']['not_found'])
+                return
+            
+            tasks = db.execute('select * from Tasks join Users on Users.user_id = Tasks.userid where Users.msg_id = ? and Tasks.subject = ? and Tasks.time_left > 0', (msg_id, subject)).fetchall()
+        else:
+            tasks = db.execute('select Tasks.name, Tasks.due from Tasks join Users on Users.user_id = Tasks.userid where Users.msg_id = ? and Tasks.time_left > 0', (msg_id, )).fetchall()
+        print(6, tasks)
+        
+        if len(tasks) == 0:
+            client.send_text(msg_id, responses['task']['no_task'])
+            return
+        
+        if has_date:
+            grain = entities['datetime'][0]['grain']
+            timezone = db_users.get_user(msg_id=msg_id)['timezone']
+            date = pendulum.parse(entities['datetime'][0]['value'], tz=timezone)
+            
+            if grain == 'day':
+                tasks = [task for task in tasks if pendulum.parse(task[1], tz=timezone).is_same_day(date)]
+            elif grain == 'week':
+                pass
+            elif grain == 'month':
+                pass
+            else:
+                pass
+            
+        if len(tasks) == 0:
+            client.send_text(msg_id, responses['task']['no_task'])
+            return    
+            
+        client.send_text(msg_id, "The following tasks are due:")
+        for t in tasks:
+            client.send_text(msg_id, t[0])
 
 def report_issue(message, msg_id, text, status=None):
     if not status:

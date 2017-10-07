@@ -47,15 +47,26 @@ def add_task():
         data = request.form
         print(data)
         msg_id = data['id']
+        print(msg_id)
         if msg_id not in main_handler.states:
             main_handler.states[msg_id] = {}
         if 'task' not in main_handler.states[msg_id]:
             main_handler.states[msg_id]['task'] = {}
+        print(1)
         main_handler.states[msg_id]['task']['name'] = data['name']
+        print(2)
         main_handler.states[msg_id]['task']['subject'] = data['subject']
-        main_handler.states[msg_id]['task']['due_date'] = data['due_due']
+        print(3)
+        main_handler.states[msg_id]['task']['due_date'] = data['due_date']
+        print(4)
         main_handler.states[msg_id]['task']['due_time'] = data['due_time']
+        print(5)
         main_handler.states[msg_id]['task']['time_left'] = data['time_left']
+        print(6)
         main_handler.update_state(msg_id, 'add.task#1')
-        main_handler.ask_affirmation(msg_id, responses['task']['verify'].format(data['name'], data['subject'], pendulum.parse(data['due_date'], strict=True).format('D MMM YYYY', formatter='alternative') , pendulum.parse(data['end_time'], strict=True).format('h:mm A', formatter='alternative') , data['time_left']))
+        print(7)
+        try: 
+            main_handler.ask_affirmation(msg_id, "hi");#responses['task']['verify'].format(data['name'], data['subject'], pendulum.parse(data['due_date'], strict=True).format('D MMM YYYY', formatter='alternative') , pendulum.parse(data['end_time'], strict=True).format('h:mm A', formatter='alternative') , data['time_left']))
+        except Exception as e:
+            print(e)
         return 'hi', 200

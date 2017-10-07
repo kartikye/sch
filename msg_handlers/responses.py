@@ -1,7 +1,7 @@
 responses = {
     'setup': {
         'greet': 'Hi {}, thank you for using Schej! Schej will help you schedule you life and classes! Please enter your email so that we can send you a calendar.',
-        'city': 'Which city so you live in? (We need to find your timezone for your calendar)',
+        'city': ['Great','Which city so you live in? (We need to find your timezone for your calendar)'],
         'reenter_email': [':(','That doesn\'t look like an email to me.', 'Please enter your email again.'],
         'timezone_error': ['Sorry, we couldn\'t find that city\'s timezone.', 'Please try again.'],
         'done': ['Woohoo!!!', 'Your calendar has been created. Please check your email for the invite. :)'],
@@ -32,6 +32,7 @@ responses = {
         'success': 'Subject added! 😄',
         'post': 'Do you want to add a class?',
         'no_subject': 'No subjects found. Please add a subject to add a class.',
+        'not_found': 'Sorry that subject was not found.'
     },
     'class': {
         'link': 'Please create the class by clicking the link:',
@@ -45,7 +46,8 @@ responses = {
         'add': 'Add a Task',
         'verify': 'Is this ok:\n\ntask: {}\nsubject: {}\ndue date: {} {}\ntime left: {}',
         'success': 'Task added! I will remind you to complete the task hehehe.',
-        'post': ''
+        'post': '',
+        'no_task': 'No tasks found.',
     },
     'notification': {
         'single_event': 'Hi, you have {} at {}.',
@@ -53,7 +55,8 @@ responses = {
     },
     'error': {
         'general': [':(', 'Oops! Something went wrong.'],
-        'not_Implemented': 'This feature is in the works!'
+        'not_Implemented': 'This feature is in the works!',
+        'do_not_understand': 'Sorry, I don\'t understand what you are asking for.'
     },
     'report': {
         'pre': ['I am extremely sorry :(', 'What is the issue?'],
