@@ -1,3 +1,15 @@
+import pendulum
+
+def print_human_date(date):
+    
+    num_days = pendulum.now(date.timezone).diff(date).in_days()
+    
+    if num_days < 7:
+        return date.format('%A')
+    else:
+        return date.format('%-d%t of %B')
+    
+
 responses = {
     'setup': {
         'greet': 'Hi {}, thank you for using Schej! Schej will help you schedule you life and classes! Please enter your email so that we can send you a calendar.',
@@ -48,6 +60,9 @@ responses = {
         'success': 'Task added! I will remind you to complete the task hehehe.',
         'post': '',
         'no_task': 'No tasks found.',
+        'tasks_due': 'The following tasks are due:',
+        'task_due': '{}: {} is due on {} ({}min left)',
+        'which_task': 'Which task would you like to complete?'
     },
     'notification': {
         'single_event': 'Hi, you have {} at {}.',
@@ -70,6 +85,7 @@ responses = {
     },
     'emoji': {
         'sad': ':('
-    }
-    
+    },
+    'print_human_date': print_human_date
 }
+

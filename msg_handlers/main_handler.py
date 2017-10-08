@@ -50,7 +50,8 @@ def handle(message):
         'add.class': add_class,
         'add.task': add_task,
         'report.issue': report_issue,
-        'request.feature': request_feature
+        'request.feature': request_feature,
+        'complete.task': complete_task
     }
     
     switch[status.split('#')[0]](message, msg_id, text, status)
@@ -62,10 +63,12 @@ def no_status(message, msg_id, text, status):
     print(entities)
     
     if 'action' in entities:
-        if message['nlp']['entities']['action'][0]['value'] == 'add':
+        if message['nlp']['entities']['action'][0]['value'].strip() == 'add':
             do_add(message, msg_id, text)
-        if message['nlp']['entities']['action'][0]['value'] == 'update':
+        if message['nlp']['entities']['action'][0]['value'].strip() == 'update':
             update_item(message, msg_id, text)
+        if message['nlp']['entities']['action'][0]['value'].strip() == 'complete':
+            complete_task(message, msg_id, text)
     elif 'query'in entities:
         do_query(message, msg_id, text)
     elif 'help' in entities:
@@ -270,7 +273,7 @@ def add_task(message, msg_id, text, status):
             pendulum.parse(states[msg_id]['task']['due_date'] + '  ' + states[msg_id]['task']['due_time'], tz=user['timezone']),
             int(states[msg_id]['task']['time_left'])))
             db.commit()
-            client.send_text(msg_id, responses['class']['success'])
+            client.send_text(msg_id, responses['task']['success'])
             update_state(msg_id, '')
             
         else:
@@ -284,6 +287,50 @@ def ask_to_add_task(msg_id):
 def update_item(message, msg_id, text, status=None):
     if not status:
         update_state(msg_id, 'update_item#1')
+
+def complete_task(message, msg_id, text, status=None):
+    if not status:
+        timezone = db_users.get_user(msg_id=msg_id)['timezone']
+        update_state(msg_id, 'complete.task#1')
+        tasks = db.execute('select Tasks.name, Tasks.due, Tasks.subject_id, Tasks.time_left, Tasks.id from Tasks join Users on Users.user_id = Tasks.userid where Users.msg_id = ? and Tasks.time_left > 0 order by datetime(Tasks.due) desc limit 5', (msg_id, )).fetchall()
+        if msg_id not in states:
+            states[msg_id] = {}
+        if 'task' not in states[msg_id]:
+            states[msg_id]['task'] = {'tasks': tasks}
+        loud_print(states)
+        task_string = ''
+        qr = []
+        for i in range(len(tasks)):
+            task_string += str(i+1) + '. ' + (responses['task']['task_due'].format(db_subjects.get_subject(id=tasks[i][2])['subject'], tasks[i][0], responses['print_human_date'](pendulum.parse(tasks[i][1], tz=timezone)), tasks[i][3]))
+            task_string += '\n'
+        task_string += str(len(tasks)+1) + '. None of these'
+        for i in range(len(tasks)+1):
+            qr.append(QuickReply(str(i+1), str(i+1)))
+        task_string = task_string[:-1]
+        client.send_text(msg_id, responses['task']['which_task'])
+        client.send_quick_replies(msg_id, task_string, qr)
+        return
+    
+    step = int(status.split('#')[1])
+    
+    if step == 1:
+        try:
+            num = int(text)-1
+        except:
+            client.send_text(msg_id, 'Sorry i dont understand that number')
+            return
+        
+        if num == len(states[msg_id]['task']['tasks']):
+            #TODO
+            pass
+        else:
+            task_id = states[msg_id]['task']['tasks'][num][4]
+            db.execute('update Tasks set time_left = 0 where id = ?', (task_id,))
+            db.commit()
+            update_state(msg_id, '')
+            states[msg_id]['task'] = {}
+            client.send_text(msg_id, 'Completed Task!!')
+        
         
 def do_query(message, msg_id, text, status=None):
     entities = message['nlp']['entities']
@@ -295,6 +342,7 @@ def do_query(message, msg_id, text, status=None):
     has_subject = 'subject' in entities
     has_date = 'datetime' in entities
     if item == 'homework' or item == 'tasks' or item == 'task':
+        timezone = db_users.get_user(msg_id=msg_id)['timezone']
         tasks = []
         
         if has_subject:
@@ -305,9 +353,9 @@ def do_query(message, msg_id, text, status=None):
                 client.send_text(msg_id, responses['subject']['not_found'])
                 return
             
-            tasks = db.execute('select * from Tasks join Users on Users.user_id = Tasks.userid where Users.msg_id = ? and Tasks.subject = ? and Tasks.time_left > 0', (msg_id, subject)).fetchall()
+            tasks = db.execute('select Tasks.name, Tasks.due, Tasks.subject_id, Tasks.time_left from Tasks join Users on Users.user_id = Tasks.userid where Users.msg_id = ? and Tasks.subject = ? and Tasks.time_left > 0 order by datetime(Tasks.due) desc', (msg_id, subject)).fetchall()
         else:
-            tasks = db.execute('select Tasks.name, Tasks.due from Tasks join Users on Users.user_id = Tasks.userid where Users.msg_id = ? and Tasks.time_left > 0', (msg_id, )).fetchall()
+            tasks = db.execute('select Tasks.name, Tasks.due, Tasks.subject_id, Tasks.time_left from Tasks join Users on Users.user_id = Tasks.userid where Users.msg_id = ? and Tasks.time_left > 0 order by datetime(Tasks.due) desc', (msg_id, )).fetchall()
         print(6, tasks)
         
         if len(tasks) == 0:
@@ -316,15 +364,19 @@ def do_query(message, msg_id, text, status=None):
         
         if has_date:
             grain = entities['datetime'][0]['grain']
-            timezone = db_users.get_user(msg_id=msg_id)['timezone']
+            
             date = pendulum.parse(entities['datetime'][0]['value'], tz=timezone)
             
             if grain == 'day':
                 tasks = [task for task in tasks if pendulum.parse(task[1], tz=timezone).is_same_day(date)]
             elif grain == 'week':
-                pass
+                start = date
+                end = start.add(days = 7)
+                tasks = [task for task in tasks if pendulum.parse(task[1], tz=timezone).between(start, end)]
             elif grain == 'month':
-                pass
+                start = date
+                end = start.add(days = 30)
+                tasks = [task for task in tasks if pendulum.parse(task[1], tz=timezone).between(start, end)]
             else:
                 pass
             
@@ -332,9 +384,9 @@ def do_query(message, msg_id, text, status=None):
             client.send_text(msg_id, responses['task']['no_task'])
             return    
             
-        client.send_text(msg_id, "The following tasks are due:")
+        client.send_text(msg_id, responses['task']['tasks_due'])
         for t in tasks:
-            client.send_text(msg_id, t[0])
+            client.send_text(msg_id, responses['task']['task_due'].format(db_subjects.get_subject(id=t[2])['subject'], t[0], responses['print_human_date'](pendulum.parse(t[1], tz=timezone)), t[3]))
 
 def report_issue(message, msg_id, text, status=None):
     if not status:
